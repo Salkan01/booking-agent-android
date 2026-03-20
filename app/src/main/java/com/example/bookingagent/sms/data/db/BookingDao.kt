@@ -22,6 +22,26 @@ interface BookingDao {
         """
         SELECT * FROM bookings
         WHERE sender = :sender
+          AND rawSms = :rawSms
+          AND createdAt >= :createdAfter
+          AND createdAt <= :createdBefore
+          AND id != :excludeId
+        ORDER BY createdAt DESC, id DESC
+        LIMIT 1
+        """,
+    )
+    suspend fun findRecentDuplicate(
+        sender: String,
+        rawSms: String,
+        createdAfter: Long,
+        createdBefore: Long,
+        excludeId: Long,
+    ): BookingEntity?
+
+    @Query(
+        """
+        SELECT * FROM bookings
+        WHERE sender = :sender
           AND shiftDate = :shiftDate
           AND startTime = :startTime
           AND endTime = :endTime

@@ -1,23 +1,44 @@
 package com.example.bookingagent.sms.calendar
 
+import android.content.ContentResolver
 import android.content.ContentValues
 import android.content.Context
 import android.provider.CalendarContract
 import com.example.bookingagent.sms.sms.ShiftInfo
 import java.time.ZoneId
 
-class CalendarWriter(
-    context: Context,
-) {
-    private val contentResolver = context.applicationContext.contentResolver
+sealed interface CalendarWriteResult {
+    data class Success(
+        val eventId: Long,
+    ) : CalendarWriteResult
 
-    fun createEvent(
+    data class Failure(
+        val errorMessage: String,
+    ) : CalendarWriteResult
+}
+
+open class CalendarWriter() {
+    private var contentResolver: ContentResolver? = null
+
+    constructor(context: Context) : this() {
+        contentResolver = context.applicationContext.contentResolver
+    }
+
+    open fun createEvent(
         shiftInfo: ShiftInfo,
         rawSms: String,
         calendarName: String,
         eventTitle: String,
-    ): Long? {
-        val calendarId = findWritableCalendarId(calendarName) ?: return null
+    ): CalendarWriteResult {
+        val resolver = contentResolver ?: return CalendarWriteResult.Failure(
+            errorMessage = "Calendar writer is not initialized",
+        )
+        val calendarId = findWritableCalendarId(
+            contentResolver = resolver,
+            calendarName = calendarName,
+        ) ?: return CalendarWriteResult.Failure(
+            errorMessage = "Calendar \"$calendarName\" not found or not writable",
+        )
         val zoneId = ZoneId.systemDefault()
         val startMillis = shiftInfo.date.atTime(shiftInfo.startTime).atZone(zoneId).toInstant().toEpochMilli()
         val endMillis = shiftInfo.date.atTime(shiftInfo.endTime).atZone(zoneId).toInstant().toEpochMilli()
@@ -32,13 +53,30 @@ class CalendarWriter(
         }
 
         return runCatching {
-            contentResolver.insert(CalendarContract.Events.CONTENT_URI, values)
-        }.getOrNull()?.let { eventUri ->
-            runCatching { eventUri.lastPathSegment?.toLong() }.getOrNull()
-        }
+            resolver.insert(CalendarContract.Events.CONTENT_URI, values)
+        }.fold(
+            onSuccess = { eventUri ->
+                val eventId = eventUri?.lastPathSegment?.toLongOrNull()
+                if (eventId != null) {
+                    CalendarWriteResult.Success(eventId = eventId)
+                } else {
+                    CalendarWriteResult.Failure(
+                        errorMessage = "Failed to read the created calendar event id",
+                    )
+                }
+            },
+            onFailure = { throwable ->
+                CalendarWriteResult.Failure(
+                    errorMessage = throwable.message ?: "Failed to insert calendar event",
+                )
+            },
+        )
     }
 
-    private fun findWritableCalendarId(calendarName: String): Long? {
+    private fun findWritableCalendarId(
+        contentResolver: ContentResolver,
+        calendarName: String,
+    ): Long? {
         val projection = arrayOf(CalendarContract.Calendars._ID)
         val selection =
             "${CalendarContract.Calendars.CALENDAR_DISPLAY_NAME} = ? AND " +

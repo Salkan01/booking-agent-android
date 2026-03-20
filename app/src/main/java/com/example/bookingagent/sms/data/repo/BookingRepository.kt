@@ -13,6 +13,21 @@ class BookingRepository(
         bookingDao.update(booking)
     }
 
+    suspend fun findRecentDuplicate(
+        sender: String,
+        rawSms: String,
+        createdAfter: Long,
+        createdBefore: Long,
+        excludeId: Long,
+    ): BookingEntity? =
+        bookingDao.findRecentDuplicate(
+            sender = sender,
+            rawSms = rawSms,
+            createdAfter = createdAfter,
+            createdBefore = createdBefore,
+            excludeId = excludeId,
+        )
+
     suspend fun findLatestAcceptedOffer(
         sender: String,
         shiftDate: String,

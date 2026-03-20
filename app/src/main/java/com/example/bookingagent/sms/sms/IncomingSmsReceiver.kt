@@ -34,7 +34,7 @@ class IncomingSmsReceiver : BroadcastReceiver() {
                 AppDatabase.getInstance(context).bookingDao(),
             ),
             calendarWriter = CalendarWriter(context),
-            settingsRepository = SettingsRepository.getInstance(context),
+            appSettingsProvider = SettingsRepository.getInstance(context)::getCurrentSettings,
         )
 
         CoroutineScope(Dispatchers.IO).launch {

@@ -7,5 +7,6 @@ enum class BookingStatus {
     CONFIRMED,
     EVENT_CREATED,
     FAILED,
+    DUPLICATE_IGNORED,
     UNKNOWN_SMS,
 }
