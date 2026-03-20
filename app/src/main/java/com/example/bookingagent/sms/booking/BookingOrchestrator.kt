@@ -1,5 +1,6 @@
 package com.example.bookingagent.sms.booking
 
+import com.example.bookingagent.sms.calendar.CalendarWriter
 import com.example.bookingagent.sms.data.model.BookingEntity
 import com.example.bookingagent.sms.data.model.BookingStatus
 import com.example.bookingagent.sms.data.repo.BookingRepository
@@ -14,6 +15,7 @@ class BookingOrchestrator(
     private val smsParser: SmsParser = SmsParser(),
     private val shiftRuleEvaluator: ShiftRuleEvaluator = ShiftRuleEvaluator(),
     private val smsSender: SmsSender = SmsSender(),
+    private val calendarWriter: CalendarWriter,
 ) {
     suspend fun handleIncomingSms(sender: String, messageBody: String) {
         when (val parsedSms = smsParser.parse(messageBody)) {
@@ -61,6 +63,30 @@ class BookingOrchestrator(
                         status = BookingStatus.CONFIRMED,
                         eventId = null,
                         createdAt = System.currentTimeMillis(),
+                    ),
+                )
+
+                val acceptedOffer = bookingRepository.findLatestAcceptedOffer(
+                    sender = sender,
+                    shiftDate = shiftInfo.date.toString(),
+                    startTime = shiftInfo.startTime.toString(),
+                    endTime = shiftInfo.endTime.toString(),
+                    details = shiftInfo.details,
+                ) ?: return
+
+                val eventId = calendarWriter.createEvent(
+                    shiftInfo = shiftInfo,
+                    rawSms = messageBody,
+                )
+
+                bookingRepository.update(
+                    acceptedOffer.copy(
+                        status = if (eventId != null) {
+                            BookingStatus.EVENT_CREATED
+                        } else {
+                            BookingStatus.FAILED
+                        },
+                        eventId = eventId,
                     ),
                 )
             }

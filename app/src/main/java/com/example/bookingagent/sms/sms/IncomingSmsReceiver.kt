@@ -7,6 +7,7 @@ import android.provider.Telephony
 import android.telephony.SmsMessage
 import android.util.Log
 import com.example.bookingagent.sms.booking.BookingOrchestrator
+import com.example.bookingagent.sms.calendar.CalendarWriter
 import com.example.bookingagent.sms.data.db.AppDatabase
 import com.example.bookingagent.sms.data.repo.BookingRepository
 import kotlinx.coroutines.CoroutineScope
@@ -31,6 +32,7 @@ class IncomingSmsReceiver : BroadcastReceiver() {
             bookingRepository = BookingRepository(
                 AppDatabase.getInstance(context).bookingDao(),
             ),
+            calendarWriter = CalendarWriter(context),
         )
 
         CoroutineScope(Dispatchers.IO).launch {
