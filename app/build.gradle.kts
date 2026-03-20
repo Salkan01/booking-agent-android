@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.bookingagent"
+    namespace = "com.example.bookingagent.sms"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.bookingagent"
+        applicationId = "com.example.bookingagent.sms"
         minSdk = 28
         targetSdk = 36
         versionCode = 1
@@ -55,4 +55,5 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("com.google.android.material:material:1.12.0")
     debugImplementation("androidx.compose.ui:ui-tooling")
+    testImplementation("junit:junit:4.13.2")
 }

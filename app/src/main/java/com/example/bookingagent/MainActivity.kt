@@ -1,4 +1,4 @@
-package com.example.bookingagent
+package com.example.bookingagent.sms
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
