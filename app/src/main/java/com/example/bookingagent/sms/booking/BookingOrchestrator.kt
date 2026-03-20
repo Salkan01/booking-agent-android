@@ -6,34 +6,41 @@ import com.example.bookingagent.sms.data.model.BookingEntity
 import com.example.bookingagent.sms.data.model.BookingStatus
 import com.example.bookingagent.sms.data.repo.BookingRepository
 import com.example.bookingagent.sms.settings.AppSettings
+import com.example.bookingagent.sms.sms.DryRunSmsGateway
 import com.example.bookingagent.sms.sms.ParsedSms
+import com.example.bookingagent.sms.sms.RealSmsGateway
 import com.example.bookingagent.sms.sms.ReplyDecision
 import com.example.bookingagent.sms.sms.ShiftInfo
 import com.example.bookingagent.sms.sms.ShiftRuleEvaluator
+import com.example.bookingagent.sms.sms.SmsGateway
+import com.example.bookingagent.sms.sms.SmsGatewayResult
 import com.example.bookingagent.sms.sms.SmsParser
-import com.example.bookingagent.sms.sms.SmsSendResult
-import com.example.bookingagent.sms.sms.SmsSender
 
 class BookingOrchestrator(
     private val bookingRepository: BookingRepository,
     private val smsParser: SmsParser = SmsParser(),
     private val shiftRuleEvaluator: ShiftRuleEvaluator = ShiftRuleEvaluator(),
-    private val smsSender: SmsSender = SmsSender(),
+    private val realSmsGateway: SmsGateway = RealSmsGateway(),
+    private val dryRunSmsGateway: SmsGateway = DryRunSmsGateway(),
     private val calendarWriter: CalendarWriter,
     private val appSettingsProvider: () -> AppSettings,
 ) {
     suspend fun handleIncomingSms(sender: String, messageBody: String) {
+        val appSettings = appSettingsProvider()
+
         when (val parsedSms = smsParser.parse(messageBody)) {
             is ParsedSms.Offer -> handleOffer(
                 sender = sender,
                 messageBody = messageBody,
                 shiftInfo = parsedSms.shiftInfo,
+                appSettings = appSettings,
             )
 
             is ParsedSms.Confirmation -> handleConfirmation(
                 sender = sender,
                 messageBody = messageBody,
                 shiftInfo = parsedSms.shiftInfo,
+                appSettings = appSettings,
             )
 
             null -> {
@@ -47,9 +54,11 @@ class BookingOrchestrator(
                         endTime = null,
                         details = null,
                         replySent = null,
+                        intendedReply = null,
                         status = BookingStatus.UNKNOWN_SMS,
                         eventId = null,
                         errorMessage = null,
+                        dryRun = appSettings.dryRunMode,
                         createdAt = System.currentTimeMillis(),
                     ),
                 )
@@ -61,6 +70,7 @@ class BookingOrchestrator(
         sender: String,
         messageBody: String,
         shiftInfo: ShiftInfo,
+        appSettings: AppSettings,
     ) {
         val savedBooking = saveBooking(
             BookingEntity(
@@ -72,9 +82,11 @@ class BookingOrchestrator(
                 endTime = shiftInfo.endTime.toString(),
                 details = shiftInfo.details,
                 replySent = null,
+                intendedReply = null,
                 status = BookingStatus.RECEIVED_OFFER,
                 eventId = null,
                 errorMessage = null,
+                dryRun = appSettings.dryRunMode,
                 createdAt = System.currentTimeMillis(),
             ),
         )
@@ -88,7 +100,6 @@ class BookingOrchestrator(
             return
         }
 
-        val appSettings = appSettingsProvider()
         if (!appSettings.automationEnabled) {
             bookingRepository.update(
                 savedBooking.copy(
@@ -100,21 +111,24 @@ class BookingOrchestrator(
 
         val decision = shiftRuleEvaluator.evaluate(shiftInfo)
         val replyText = decision.name
-        when (val sendResult = smsSender.send(sender, replyText)) {
-            SmsSendResult.Success -> {
+        val smsGateway = if (appSettings.dryRunMode) dryRunSmsGateway else realSmsGateway
+        when (val sendResult = smsGateway.send(sender, replyText)) {
+            SmsGatewayResult.Success -> {
                 bookingRepository.update(
                     savedBooking.copy(
-                        replySent = replyText,
+                        replySent = if (appSettings.dryRunMode) null else replyText,
+                        intendedReply = if (appSettings.dryRunMode) replyText else null,
                         status = decision.toBookingStatus(),
-                        errorMessage = null,
+                        errorMessage = if (appSettings.dryRunMode) DRY_RUN_REPLY_MESSAGE else null,
                     ),
                 )
             }
 
-            is SmsSendResult.Failure -> {
+            is SmsGatewayResult.Failure -> {
                 bookingRepository.update(
                     savedBooking.copy(
                         status = BookingStatus.FAILED,
+                        intendedReply = replyText,
                         errorMessage = "Failed to send reply \"$replyText\": ${sendResult.errorMessage}",
                     ),
                 )
@@ -126,6 +140,7 @@ class BookingOrchestrator(
         sender: String,
         messageBody: String,
         shiftInfo: ShiftInfo,
+        appSettings: AppSettings,
     ) {
         val savedBooking = saveBooking(
             BookingEntity(
@@ -137,9 +152,11 @@ class BookingOrchestrator(
                 endTime = shiftInfo.endTime.toString(),
                 details = shiftInfo.details,
                 replySent = null,
+                intendedReply = null,
                 status = BookingStatus.CONFIRMED,
                 eventId = null,
                 errorMessage = null,
+                dryRun = appSettings.dryRunMode,
                 createdAt = System.currentTimeMillis(),
             ),
         )
@@ -153,7 +170,6 @@ class BookingOrchestrator(
             return
         }
 
-        val appSettings = appSettingsProvider()
         if (!appSettings.automationEnabled) {
             bookingRepository.update(
                 savedBooking.copy(
@@ -237,6 +253,7 @@ class BookingOrchestrator(
         const val AUTOMATION_DISABLED_REPLY_MESSAGE = "Automation disabled; reply skipped"
         const val AUTOMATION_DISABLED_EVENT_MESSAGE = "Automation disabled; event creation skipped"
         const val NO_MATCHING_OFFER_MESSAGE = "No matching accepted offer found"
+        const val DRY_RUN_REPLY_MESSAGE = "Dry run mode: no real SMS was sent"
     }
 }
 

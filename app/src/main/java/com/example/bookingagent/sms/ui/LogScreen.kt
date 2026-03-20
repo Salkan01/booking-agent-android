@@ -93,6 +93,7 @@ private fun SettingsSummaryCard(
                 fontWeight = FontWeight.SemiBold,
             )
             LogField(label = "Automation enabled", value = settings.automationEnabled.toString())
+            LogField(label = "Dry run mode", value = settings.dryRunMode.toString())
             LogField(label = "Calendar name", value = settings.targetCalendarName)
             LogField(label = "Event title", value = settings.eventTitle)
         }
@@ -186,7 +187,9 @@ private fun BookingLogItem(
             LogField(label = "Start", value = booking.startTime)
             LogField(label = "End", value = booking.endTime)
             LogField(label = "Details", value = booking.details)
+            LogField(label = "Dry run", value = booking.dryRun.toString())
             LogField(label = "Reply", value = booking.replySent)
+            LogField(label = "Intended reply", value = booking.intendedReply)
             LogField(label = "Status", value = booking.status.name)
             LogField(label = "Event ID", value = booking.eventId?.toString())
             LogField(label = "Error", value = booking.errorMessage)

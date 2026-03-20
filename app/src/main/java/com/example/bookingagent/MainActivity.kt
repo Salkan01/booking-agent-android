@@ -64,6 +64,7 @@ class MainActivity : ComponentActivity() {
                 onTargetCalendarNameChange = settingsViewModel::updateTargetCalendarName,
                 onEventTitleChange = settingsViewModel::updateEventTitle,
                 onAutomationEnabledChange = settingsViewModel::updateAutomationEnabled,
+                onDryRunModeChange = settingsViewModel::updateDryRunMode,
             )
         }
     }
@@ -117,6 +118,7 @@ private fun BookingAgentApp(
     onTargetCalendarNameChange: (String) -> Unit,
     onEventTitleChange: (String) -> Unit,
     onAutomationEnabledChange: (Boolean) -> Unit,
+    onDryRunModeChange: (Boolean) -> Unit,
 ) {
     MaterialTheme {
         var showSettings by remember { mutableStateOf(false) }
@@ -170,6 +172,7 @@ private fun BookingAgentApp(
                         onTargetCalendarNameChange = onTargetCalendarNameChange,
                         onEventTitleChange = onEventTitleChange,
                         onAutomationEnabledChange = onAutomationEnabledChange,
+                        onDryRunModeChange = onDryRunModeChange,
                     )
                 } else {
                     LogScreen(
@@ -209,6 +212,7 @@ private fun BookingAgentAppPreview() {
         onTargetCalendarNameChange = {},
         onEventTitleChange = {},
         onAutomationEnabledChange = {},
+        onDryRunModeChange = {},
     )
 }
 

@@ -7,26 +7,30 @@ import com.example.bookingagent.sms.data.model.BookingEntity
 import com.example.bookingagent.sms.data.model.BookingStatus
 import com.example.bookingagent.sms.data.repo.BookingRepository
 import com.example.bookingagent.sms.settings.AppSettings
-import com.example.bookingagent.sms.sms.SmsSendResult
-import com.example.bookingagent.sms.sms.SmsSender
+import com.example.bookingagent.sms.sms.DebugSmsSimulator
+import com.example.bookingagent.sms.sms.SmsGateway
+import com.example.bookingagent.sms.sms.SmsGatewayResult
+import com.example.bookingagent.sms.sms.ShiftInfo
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class BookingOrchestratorTest {
     @Test
     fun duplicateProtectionPreventsDuplicateSideEffects() = runBlocking {
         val bookingDao = FakeBookingDao()
-        val bookingRepository = BookingRepository(bookingDao)
-        val smsSender = RecordingSmsSender()
+        val realSmsGateway = RecordingSmsGateway()
+        val dryRunSmsGateway = RecordingSmsGateway()
         val orchestrator = BookingOrchestrator(
-            bookingRepository = bookingRepository,
-            smsSender = smsSender,
+            bookingRepository = BookingRepository(bookingDao),
+            realSmsGateway = realSmsGateway,
+            dryRunSmsGateway = dryRunSmsGateway,
             calendarWriter = RecordingCalendarWriter(),
-            appSettingsProvider = { AppSettings() },
+            appSettingsProvider = { AppSettings(dryRunMode = false) },
         )
         val message =
             "Hej! Ledigt pass 2026-03-07 07:00 - 19:00 A Skänninge Alla. " +
@@ -35,12 +39,11 @@ class BookingOrchestratorTest {
         orchestrator.handleIncomingSms(sender = "0700000000", messageBody = message)
         orchestrator.handleIncomingSms(sender = "0700000000", messageBody = message)
 
-        assertEquals(1, smsSender.sentMessages.size)
-        assertEquals("J", smsSender.sentMessages.single().messageBody)
+        assertEquals(1, realSmsGateway.sentMessages.size)
+        assertEquals("J", realSmsGateway.sentMessages.single().messageBody)
+        assertEquals(0, dryRunSmsGateway.sentMessages.size)
 
-        val allBookings = bookingDao.getStoredBookings()
-        assertEquals(2, allBookings.size)
-        val latestBooking = allBookings.first()
+        val latestBooking = bookingDao.getStoredBookings().first()
         assertEquals(BookingStatus.DUPLICATE_IGNORED, latestBooking.status)
         assertEquals("Duplicate SMS detected; side effects skipped", latestBooking.errorMessage)
         assertNull(latestBooking.replySent)
@@ -60,18 +63,21 @@ class BookingOrchestratorTest {
                 endTime = "19:00",
                 details = "A Skänninge Alla",
                 replySent = "N",
+                intendedReply = null,
                 status = BookingStatus.REPLIED_N,
                 eventId = null,
                 errorMessage = null,
+                dryRun = false,
                 createdAt = 1L,
             ),
         )
         val calendarWriter = RecordingCalendarWriter()
         val orchestrator = BookingOrchestrator(
             bookingRepository = bookingRepository,
-            smsSender = RecordingSmsSender(),
+            realSmsGateway = RecordingSmsGateway(),
+            dryRunSmsGateway = RecordingSmsGateway(),
             calendarWriter = calendarWriter,
-            appSettingsProvider = { AppSettings() },
+            appSettingsProvider = { AppSettings(dryRunMode = false) },
         )
 
         orchestrator.handleIncomingSms(
@@ -87,14 +93,109 @@ class BookingOrchestratorTest {
         assertEquals("No matching accepted offer found", savedConfirmation.errorMessage)
         assertNull(savedConfirmation.eventId)
     }
+
+    @Test
+    fun dryRunOfferProcessingDoesNotCallRealSmsSending() = runBlocking {
+        val bookingDao = FakeBookingDao()
+        val realSmsGateway = RecordingSmsGateway()
+        val dryRunSmsGateway = RecordingSmsGateway()
+        val orchestrator = BookingOrchestrator(
+            bookingRepository = BookingRepository(bookingDao),
+            realSmsGateway = realSmsGateway,
+            dryRunSmsGateway = dryRunSmsGateway,
+            calendarWriter = RecordingCalendarWriter(),
+            appSettingsProvider = { AppSettings(dryRunMode = true) },
+        )
+
+        orchestrator.handleIncomingSms(
+            sender = "0700000000",
+            messageBody = "Hej! Ledigt pass 2026-03-07 07:00 - 19:00 A Skänninge Alla. Vill du anmäla intresse för passet svara: J annars N",
+        )
+
+        assertEquals(0, realSmsGateway.sentMessages.size)
+        assertEquals(1, dryRunSmsGateway.sentMessages.size)
+    }
+
+    @Test
+    fun dryRunOfferProcessingStoresIntendedReply() = runBlocking {
+        val bookingDao = FakeBookingDao()
+        val orchestrator = BookingOrchestrator(
+            bookingRepository = BookingRepository(bookingDao),
+            realSmsGateway = RecordingSmsGateway(),
+            dryRunSmsGateway = RecordingSmsGateway(),
+            calendarWriter = RecordingCalendarWriter(),
+            appSettingsProvider = { AppSettings(dryRunMode = true) },
+        )
+
+        orchestrator.handleIncomingSms(
+            sender = "0700000000",
+            messageBody = "Hej! Ledigt pass 2026-03-07 07:00 - 19:00 A Skänninge Alla. Vill du anmäla intresse för passet svara: J annars N",
+        )
+
+        val savedBooking = bookingDao.getStoredBookings().first()
+        assertTrue(savedBooking.dryRun)
+        assertEquals("J", savedBooking.intendedReply)
+        assertNull(savedBooking.replySent)
+        assertEquals("Dry run mode: no real SMS was sent", savedBooking.errorMessage)
+    }
+
+    @Test
+    fun nonDryRunModeCanStillUseRealSenderAbstraction() = runBlocking {
+        val bookingDao = FakeBookingDao()
+        val realSmsGateway = RecordingSmsGateway()
+        val dryRunSmsGateway = RecordingSmsGateway()
+        val orchestrator = BookingOrchestrator(
+            bookingRepository = BookingRepository(bookingDao),
+            realSmsGateway = realSmsGateway,
+            dryRunSmsGateway = dryRunSmsGateway,
+            calendarWriter = RecordingCalendarWriter(),
+            appSettingsProvider = { AppSettings(dryRunMode = false) },
+        )
+
+        orchestrator.handleIncomingSms(
+            sender = "0700000000",
+            messageBody = "Hej! Ledigt pass 2026-03-07 07:00 - 19:00 A Skänninge Alla. Vill du anmäla intresse för passet svara: J annars N",
+        )
+
+        val savedBooking = bookingDao.getStoredBookings().first()
+        assertEquals(1, realSmsGateway.sentMessages.size)
+        assertEquals(0, dryRunSmsGateway.sentMessages.size)
+        assertEquals("J", savedBooking.replySent)
+        assertNull(savedBooking.intendedReply)
+        assertEquals(BookingStatus.REPLIED_J, savedBooking.status)
+    }
+
+    @Test
+    fun debugSimulationRespectsDryRunMode() = runBlocking {
+        val bookingDao = FakeBookingDao()
+        val realSmsGateway = RecordingSmsGateway()
+        val dryRunSmsGateway = RecordingSmsGateway()
+        val orchestrator = BookingOrchestrator(
+            bookingRepository = BookingRepository(bookingDao),
+            realSmsGateway = realSmsGateway,
+            dryRunSmsGateway = dryRunSmsGateway,
+            calendarWriter = RecordingCalendarWriter(),
+            appSettingsProvider = { AppSettings(dryRunMode = true) },
+        )
+        val simulator = DebugSmsSimulator(orchestrator)
+
+        simulator.simulateIncomingSms(
+            sender = "0700000000",
+            messageBody = "Hej! Ledigt pass 2026-03-07 07:00 - 19:00 A Skänninge Alla. Vill du anmäla intresse för passet svara: J annars N",
+        )
+
+        assertEquals(0, realSmsGateway.sentMessages.size)
+        assertEquals(1, dryRunSmsGateway.sentMessages.size)
+        assertTrue(bookingDao.getStoredBookings().first().dryRun)
+    }
 }
 
-private class RecordingSmsSender : SmsSender() {
+private class RecordingSmsGateway : SmsGateway {
     val sentMessages = mutableListOf<SentMessage>()
 
-    override fun send(destination: String, messageBody: String): SmsSendResult {
+    override fun send(destination: String, messageBody: String): SmsGatewayResult {
         sentMessages += SentMessage(destination = destination, messageBody = messageBody)
-        return SmsSendResult.Success
+        return SmsGatewayResult.Success
     }
 }
 
@@ -107,7 +208,7 @@ private class RecordingCalendarWriter : CalendarWriter() {
     var createEventCalls: Int = 0
 
     override fun createEvent(
-        shiftInfo: com.example.bookingagent.sms.sms.ShiftInfo,
+        shiftInfo: ShiftInfo,
         rawSms: String,
         calendarName: String,
         eventTitle: String,

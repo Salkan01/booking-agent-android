@@ -15,8 +15,10 @@ data class BookingEntity(
     val endTime: String?,
     val details: String?,
     val replySent: String?,
+    val intendedReply: String?,
     val status: BookingStatus,
     val eventId: Long?,
     val errorMessage: String?,
+    val dryRun: Boolean,
     val createdAt: Long,
 )

@@ -37,6 +37,13 @@ class SettingsRepository private constructor(
         _settings.value = readSettings()
     }
 
+    fun updateDryRunMode(value: Boolean) {
+        sharedPreferences.edit()
+            .putBoolean(KEY_DRY_RUN_MODE, value)
+            .apply()
+        _settings.value = readSettings()
+    }
+
     private fun readSettings(): AppSettings =
         AppSettings(
             targetCalendarName = readStringSetting(
@@ -50,6 +57,10 @@ class SettingsRepository private constructor(
             automationEnabled = sharedPreferences.getBoolean(
                 KEY_AUTOMATION_ENABLED,
                 AppSettings.DEFAULT_AUTOMATION_ENABLED,
+            ),
+            dryRunMode = sharedPreferences.getBoolean(
+                KEY_DRY_RUN_MODE,
+                AppSettings.DEFAULT_DRY_RUN_MODE,
             ),
         )
 
@@ -67,6 +78,7 @@ class SettingsRepository private constructor(
         private const val KEY_TARGET_CALENDAR_NAME = "target_calendar_name"
         private const val KEY_EVENT_TITLE = "event_title"
         private const val KEY_AUTOMATION_ENABLED = "automation_enabled"
+        private const val KEY_DRY_RUN_MODE = "dry_run_mode"
 
         @Volatile
         private var instance: SettingsRepository? = null

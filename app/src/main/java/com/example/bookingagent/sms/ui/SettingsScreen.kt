@@ -24,6 +24,7 @@ fun SettingsScreen(
     onTargetCalendarNameChange: (String) -> Unit,
     onEventTitleChange: (String) -> Unit,
     onAutomationEnabledChange: (Boolean) -> Unit,
+    onDryRunModeChange: (Boolean) -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -79,6 +80,31 @@ fun SettingsScreen(
             Switch(
                 checked = settings.automationEnabled,
                 onCheckedChange = onAutomationEnabledChange,
+            )
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    text = "Dry Run Mode",
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                Text(
+                    text = "Process and log replies without sending real SMS.",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+
+            Switch(
+                checked = settings.dryRunMode,
+                onCheckedChange = onDryRunModeChange,
             )
         }
     }
