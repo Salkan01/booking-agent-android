@@ -65,6 +65,12 @@ class MainActivity : ComponentActivity() {
                 onEventTitleChange = settingsViewModel::updateEventTitle,
                 onAutomationEnabledChange = settingsViewModel::updateAutomationEnabled,
                 onDryRunModeChange = settingsViewModel::updateDryRunMode,
+                onManualReviewModeChange = settingsViewModel::updateManualReviewMode,
+                onApproveOffer = logViewModel::approveOffer,
+                onRejectOffer = logViewModel::rejectOffer,
+                onRerunDecision = logViewModel::rerunDecision,
+                onRetryConfirmationMatch = logViewModel::retryConfirmationMatch,
+                onCreateEventManually = logViewModel::createEventManually,
             )
         }
     }
@@ -119,6 +125,12 @@ private fun BookingAgentApp(
     onEventTitleChange: (String) -> Unit,
     onAutomationEnabledChange: (Boolean) -> Unit,
     onDryRunModeChange: (Boolean) -> Unit,
+    onManualReviewModeChange: (Boolean) -> Unit,
+    onApproveOffer: (Long) -> Unit,
+    onRejectOffer: (Long) -> Unit,
+    onRerunDecision: (Long) -> Unit,
+    onRetryConfirmationMatch: (Long) -> Unit,
+    onCreateEventManually: (Long) -> Unit,
 ) {
     MaterialTheme {
         var showSettings by remember { mutableStateOf(false) }
@@ -173,6 +185,7 @@ private fun BookingAgentApp(
                         onEventTitleChange = onEventTitleChange,
                         onAutomationEnabledChange = onAutomationEnabledChange,
                         onDryRunModeChange = onDryRunModeChange,
+                        onManualReviewModeChange = onManualReviewModeChange,
                     )
                 } else {
                     LogScreen(
@@ -180,6 +193,11 @@ private fun BookingAgentApp(
                         settings = settings,
                         permissions = permissionStates,
                         onRequestPermission = onRequestPermission,
+                        onApproveOffer = onApproveOffer,
+                        onRejectOffer = onRejectOffer,
+                        onRerunDecision = onRerunDecision,
+                        onRetryConfirmationMatch = onRetryConfirmationMatch,
+                        onCreateEventManually = onCreateEventManually,
                     )
                 }
             }
@@ -213,6 +231,12 @@ private fun BookingAgentAppPreview() {
         onEventTitleChange = {},
         onAutomationEnabledChange = {},
         onDryRunModeChange = {},
+        onManualReviewModeChange = {},
+        onApproveOffer = {},
+        onRejectOffer = {},
+        onRerunDecision = {},
+        onRetryConfirmationMatch = {},
+        onCreateEventManually = {},
     )
 }
 

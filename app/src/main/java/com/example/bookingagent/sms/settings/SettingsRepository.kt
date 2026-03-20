@@ -44,6 +44,13 @@ class SettingsRepository private constructor(
         _settings.value = readSettings()
     }
 
+    fun updateManualReviewMode(value: Boolean) {
+        sharedPreferences.edit()
+            .putBoolean(KEY_MANUAL_REVIEW_MODE, value)
+            .apply()
+        _settings.value = readSettings()
+    }
+
     private fun readSettings(): AppSettings =
         AppSettings(
             targetCalendarName = readStringSetting(
@@ -62,6 +69,10 @@ class SettingsRepository private constructor(
                 KEY_DRY_RUN_MODE,
                 AppSettings.DEFAULT_DRY_RUN_MODE,
             ),
+            manualReviewMode = sharedPreferences.getBoolean(
+                KEY_MANUAL_REVIEW_MODE,
+                AppSettings.DEFAULT_MANUAL_REVIEW_MODE,
+            ),
         )
 
     private fun readStringSetting(
@@ -79,6 +90,7 @@ class SettingsRepository private constructor(
         private const val KEY_EVENT_TITLE = "event_title"
         private const val KEY_AUTOMATION_ENABLED = "automation_enabled"
         private const val KEY_DRY_RUN_MODE = "dry_run_mode"
+        private const val KEY_MANUAL_REVIEW_MODE = "manual_review_mode"
 
         @Volatile
         private var instance: SettingsRepository? = null

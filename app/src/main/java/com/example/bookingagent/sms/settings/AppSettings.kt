@@ -5,11 +5,13 @@ data class AppSettings(
     val eventTitle: String = DEFAULT_EVENT_TITLE,
     val automationEnabled: Boolean = DEFAULT_AUTOMATION_ENABLED,
     val dryRunMode: Boolean = DEFAULT_DRY_RUN_MODE,
+    val manualReviewMode: Boolean = DEFAULT_MANUAL_REVIEW_MODE,
 ) {
     companion object {
         const val DEFAULT_TARGET_CALENDAR_NAME = "عمل"
         const val DEFAULT_EVENT_TITLE = "عمل"
         const val DEFAULT_AUTOMATION_ENABLED = true
         const val DEFAULT_DRY_RUN_MODE = true
+        const val DEFAULT_MANUAL_REVIEW_MODE = true
     }
 }

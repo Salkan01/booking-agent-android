@@ -9,6 +9,8 @@ class BookingRepository(
 ) {
     suspend fun insert(booking: BookingEntity): Long = bookingDao.insert(booking)
 
+    suspend fun getById(id: Long): BookingEntity? = bookingDao.getById(id)
+
     suspend fun update(booking: BookingEntity) {
         bookingDao.update(booking)
     }

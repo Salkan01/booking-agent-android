@@ -15,6 +15,9 @@ interface BookingDao {
     @Update
     suspend fun update(booking: BookingEntity)
 
+    @Query("SELECT * FROM bookings WHERE id = :id LIMIT 1")
+    suspend fun getById(id: Long): BookingEntity?
+
     @Query("SELECT * FROM bookings ORDER BY createdAt DESC, id DESC")
     fun getAll(): Flow<List<BookingEntity>>
 

@@ -26,4 +26,8 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun updateDryRunMode(value: Boolean) {
         settingsRepository.updateDryRunMode(value)
     }
+
+    fun updateManualReviewMode(value: Boolean) {
+        settingsRepository.updateManualReviewMode(value)
+    }
 }

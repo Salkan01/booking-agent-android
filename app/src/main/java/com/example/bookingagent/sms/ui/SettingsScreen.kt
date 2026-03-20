@@ -25,6 +25,7 @@ fun SettingsScreen(
     onEventTitleChange: (String) -> Unit,
     onAutomationEnabledChange: (Boolean) -> Unit,
     onDryRunModeChange: (Boolean) -> Unit,
+    onManualReviewModeChange: (Boolean) -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -105,6 +106,31 @@ fun SettingsScreen(
             Switch(
                 checked = settings.dryRunMode,
                 onCheckedChange = onDryRunModeChange,
+            )
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    text = "Manual Review Mode",
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                Text(
+                    text = "Queue parsed offers and confirmations for manual approval.",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+
+            Switch(
+                checked = settings.manualReviewMode,
+                onCheckedChange = onManualReviewModeChange,
             )
         }
     }

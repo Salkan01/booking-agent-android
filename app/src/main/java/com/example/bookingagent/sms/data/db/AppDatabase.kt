@@ -10,10 +10,11 @@ import androidx.room.TypeConverters
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.bookingagent.sms.data.model.BookingEntity
 import com.example.bookingagent.sms.data.model.BookingStatus
+import com.example.bookingagent.sms.data.model.ReviewState
 
 @Database(
     entities = [BookingEntity::class],
-    version = 3,
+    version = 4,
     exportSchema = false,
 )
 @TypeConverters(BookingStatusConverters::class)
@@ -30,7 +31,7 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "booking-agent.db",
-                ).addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                     .build()
                     .also { instance = it }
             }
@@ -49,6 +50,16 @@ abstract class AppDatabase : RoomDatabase() {
                     database.execSQL("ALTER TABLE bookings ADD COLUMN dryRun INTEGER NOT NULL DEFAULT 0")
                 }
             }
+
+        private val MIGRATION_3_4 =
+            object : Migration(3, 4) {
+                override fun migrate(database: SupportSQLiteDatabase) {
+                    database.execSQL("ALTER TABLE bookings ADD COLUMN recommendedReply TEXT")
+                    database.execSQL("ALTER TABLE bookings ADD COLUMN recommendationFromRules INTEGER NOT NULL DEFAULT 0")
+                    database.execSQL("ALTER TABLE bookings ADD COLUMN reviewState TEXT NOT NULL DEFAULT 'AUTO_PROCESSED'")
+                    database.execSQL("ALTER TABLE bookings ADD COLUMN matchedBookingId INTEGER")
+                }
+            }
     }
 }
 
@@ -58,4 +69,10 @@ class BookingStatusConverters {
 
     @TypeConverter
     fun toBookingStatus(value: String): BookingStatus = BookingStatus.valueOf(value)
+
+    @TypeConverter
+    fun fromReviewState(value: ReviewState): String = value.name
+
+    @TypeConverter
+    fun toReviewState(value: String): ReviewState = ReviewState.valueOf(value)
 }
