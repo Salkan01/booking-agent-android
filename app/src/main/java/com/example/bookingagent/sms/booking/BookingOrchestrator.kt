@@ -4,6 +4,7 @@ import com.example.bookingagent.sms.calendar.CalendarWriter
 import com.example.bookingagent.sms.data.model.BookingEntity
 import com.example.bookingagent.sms.data.model.BookingStatus
 import com.example.bookingagent.sms.data.repo.BookingRepository
+import com.example.bookingagent.sms.settings.SettingsRepository
 import com.example.bookingagent.sms.sms.ParsedSms
 import com.example.bookingagent.sms.sms.ReplyDecision
 import com.example.bookingagent.sms.sms.ShiftRuleEvaluator
@@ -16,8 +17,11 @@ class BookingOrchestrator(
     private val shiftRuleEvaluator: ShiftRuleEvaluator = ShiftRuleEvaluator(),
     private val smsSender: SmsSender = SmsSender(),
     private val calendarWriter: CalendarWriter,
+    private val settingsRepository: SettingsRepository,
 ) {
     suspend fun handleIncomingSms(sender: String, messageBody: String) {
+        val appSettings = settingsRepository.getCurrentSettings()
+
         when (val parsedSms = smsParser.parse(messageBody)) {
             is ParsedSms.Offer -> {
                 val shiftInfo = parsedSms.shiftInfo
@@ -35,6 +39,10 @@ class BookingOrchestrator(
                     createdAt = System.currentTimeMillis(),
                 )
                 val bookingId = bookingRepository.insert(booking)
+                if (!appSettings.automationEnabled) {
+                    return
+                }
+
                 val decision = shiftRuleEvaluator.evaluate(shiftInfo)
                 val replyText = decision.name
 
@@ -66,6 +74,10 @@ class BookingOrchestrator(
                     ),
                 )
 
+                if (!appSettings.automationEnabled) {
+                    return
+                }
+
                 val acceptedOffer = bookingRepository.findLatestAcceptedOffer(
                     sender = sender,
                     shiftDate = shiftInfo.date.toString(),
@@ -77,6 +89,8 @@ class BookingOrchestrator(
                 val eventId = calendarWriter.createEvent(
                     shiftInfo = shiftInfo,
                     rawSms = messageBody,
+                    calendarName = appSettings.targetCalendarName,
+                    eventTitle = appSettings.eventTitle,
                 )
 
                 bookingRepository.update(

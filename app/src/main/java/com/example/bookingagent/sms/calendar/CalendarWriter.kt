@@ -11,15 +11,20 @@ class CalendarWriter(
 ) {
     private val contentResolver = context.applicationContext.contentResolver
 
-    fun createEvent(shiftInfo: ShiftInfo, rawSms: String): Long? {
-        val calendarId = findWritableCalendarId() ?: return null
+    fun createEvent(
+        shiftInfo: ShiftInfo,
+        rawSms: String,
+        calendarName: String,
+        eventTitle: String,
+    ): Long? {
+        val calendarId = findWritableCalendarId(calendarName) ?: return null
         val zoneId = ZoneId.systemDefault()
         val startMillis = shiftInfo.date.atTime(shiftInfo.startTime).atZone(zoneId).toInstant().toEpochMilli()
         val endMillis = shiftInfo.date.atTime(shiftInfo.endTime).atZone(zoneId).toInstant().toEpochMilli()
         val description = buildDescription(shiftInfo.details, rawSms)
         val values = ContentValues().apply {
             put(CalendarContract.Events.CALENDAR_ID, calendarId)
-            put(CalendarContract.Events.TITLE, EVENT_TITLE)
+            put(CalendarContract.Events.TITLE, eventTitle)
             put(CalendarContract.Events.DESCRIPTION, description)
             put(CalendarContract.Events.DTSTART, startMillis)
             put(CalendarContract.Events.DTEND, endMillis)
@@ -33,12 +38,12 @@ class CalendarWriter(
         }
     }
 
-    private fun findWritableCalendarId(): Long? {
+    private fun findWritableCalendarId(calendarName: String): Long? {
         val projection = arrayOf(CalendarContract.Calendars._ID)
         val selection =
             "${CalendarContract.Calendars.CALENDAR_DISPLAY_NAME} = ? AND " +
                 "${CalendarContract.Calendars.CALENDAR_ACCESS_LEVEL} >= ?"
-        val selectionArgs = arrayOf(CALENDAR_NAME, CalendarContract.Calendars.CAL_ACCESS_CONTRIBUTOR.toString())
+        val selectionArgs = arrayOf(calendarName, CalendarContract.Calendars.CAL_ACCESS_CONTRIBUTOR.toString())
 
         return runCatching {
             contentResolver.query(
@@ -64,10 +69,5 @@ class CalendarWriter(
         } else {
             rawSms
         }
-    }
-
-    private companion object {
-        const val CALENDAR_NAME = "عمل"
-        const val EVENT_TITLE = "عمل"
     }
 }

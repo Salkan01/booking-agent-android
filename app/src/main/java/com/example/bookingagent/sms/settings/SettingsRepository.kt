@@ -39,19 +39,28 @@ class SettingsRepository private constructor(
 
     private fun readSettings(): AppSettings =
         AppSettings(
-            targetCalendarName = sharedPreferences.getString(
-                KEY_TARGET_CALENDAR_NAME,
-                AppSettings.DEFAULT_TARGET_CALENDAR_NAME,
-            ) ?: AppSettings.DEFAULT_TARGET_CALENDAR_NAME,
-            eventTitle = sharedPreferences.getString(
-                KEY_EVENT_TITLE,
-                AppSettings.DEFAULT_EVENT_TITLE,
-            ) ?: AppSettings.DEFAULT_EVENT_TITLE,
+            targetCalendarName = readStringSetting(
+                key = KEY_TARGET_CALENDAR_NAME,
+                defaultValue = AppSettings.DEFAULT_TARGET_CALENDAR_NAME,
+            ),
+            eventTitle = readStringSetting(
+                key = KEY_EVENT_TITLE,
+                defaultValue = AppSettings.DEFAULT_EVENT_TITLE,
+            ),
             automationEnabled = sharedPreferences.getBoolean(
                 KEY_AUTOMATION_ENABLED,
                 AppSettings.DEFAULT_AUTOMATION_ENABLED,
             ),
         )
+
+    private fun readStringSetting(
+        key: String,
+        defaultValue: String,
+    ): String =
+        sharedPreferences.getString(key, defaultValue)
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
+            ?: defaultValue
 
     companion object {
         private const val PREFERENCES_NAME = "app_settings"
