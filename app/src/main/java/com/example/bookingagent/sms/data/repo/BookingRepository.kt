@@ -2,6 +2,7 @@ package com.example.bookingagent.sms.data.repo
 
 import com.example.bookingagent.sms.data.db.BookingDao
 import com.example.bookingagent.sms.data.model.BookingEntity
+import kotlinx.coroutines.flow.Flow
 
 class BookingRepository(
     private val bookingDao: BookingDao,
@@ -26,4 +27,6 @@ class BookingRepository(
             endTime = endTime,
             details = details,
         )
+
+    fun getAll(): Flow<List<BookingEntity>> = bookingDao.getAll()
 }

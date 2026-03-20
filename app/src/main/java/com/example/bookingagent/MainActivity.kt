@@ -1,51 +1,46 @@
 package com.example.bookingagent.sms
 
 import android.os.Bundle
+import androidx.activity.viewModels
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
+import com.example.bookingagent.sms.ui.LogScreen
+import com.example.bookingagent.sms.ui.LogUiState
+import com.example.bookingagent.sms.ui.LogViewModel
 
 class MainActivity : ComponentActivity() {
+    private val logViewModel: LogViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            BookingAgentApp()
+            val uiState by logViewModel.uiState.collectAsState()
+            BookingAgentApp(uiState = uiState)
         }
     }
 }
 
 @Composable
-private fun BookingAgentApp() {
+private fun BookingAgentApp(
+    uiState: LogUiState,
+) {
     MaterialTheme {
-        Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .padding(24.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = "Booking Agent",
-                    style = MaterialTheme.typography.headlineMedium,
-                )
-            }
-        }
+        LogScreen(uiState = uiState)
     }
 }
 
 @Preview(showBackground = true)
 @Composable
 private fun BookingAgentAppPreview() {
-    BookingAgentApp()
+    BookingAgentApp(
+        uiState = LogUiState(
+            isLoading = false,
+            bookings = emptyList(),
+        ),
+    )
 }
