@@ -1,6 +1,7 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("org.jetbrains.kotlin.kapt")
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
@@ -51,9 +52,12 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.10.1")
     implementation(platform("androidx.compose:compose-bom:2025.02.00"))
     implementation("androidx.compose.material3:material3")
+    implementation("androidx.room:room-ktx:2.8.4")
+    implementation("androidx.room:room-runtime:2.8.4")
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("com.google.android.material:material:1.12.0")
+    kapt("androidx.room:room-compiler:2.8.4")
     debugImplementation("androidx.compose.ui:ui-tooling")
     testImplementation("junit:junit:4.13.2")
 }
